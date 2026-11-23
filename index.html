@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>게시물 보기</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --page: #f3f3f5;
+    --text: #111111;
+    --muted: #8e8e8e;
+    --line: #e6e6e6;
+    --accent: #0095f6;
+    --stage: #000000;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--page);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* 레이아웃: 휴대폰은 위 영상 / 아래 댓글, 넓은 화면은 좌우 */
+  .post {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--bg);
+  }
+  .stage {
+    position: relative;
+    background: var(--stage);
+    flex: 0 0 auto;
+    height: 50dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  video {
+    height: 100%;
+    width: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;       /* 화면을 눌러 멈추지 못하게 */
+  }
+  .progress {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 3px; background: rgba(255,255,255,.25);
+  }
+  .progress > i { display: block; height: 100%; width: 0; background: #fff; }
+
+  .comments {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-top: 1px solid var(--line);
+  }
+  .sheet-head {
+    position: relative;
+    text-align: center;
+    padding: 10px 0 12px;
+    font-weight: 700;
+    font-size: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .sheet-head::before {
+    content: ""; display: block; width: 36px; height: 4px; border-radius: 2px;
+    background: #d6d6d6; margin: 0 auto 10px;
+  }
+  .list { flex: 1 1 auto; overflow-y: auto; padding: 6px 16px 10px; }
+  .c { display: flex; gap: 12px; padding: 10px 0; align-items: flex-start; }
+  .av { flex: 0 0 36px; height: 36px; border-radius: 50%; }
+  .body { flex: 1 1 auto; min-width: 0; }
+  .meta { font-size: 13px; line-height: 1.3; }
+  .meta b { font-weight: 600; margin-right: 6px; }
+  .meta span { color: var(--muted); }
+  .txt { font-size: 15px; line-height: 1.4; margin-top: 2px; word-break: keep-all; }
+  .reply { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 600; }
+  .heart { flex: 0 0 auto; margin-top: 10px; color: var(--muted); }
+  .empty { text-align: center; padding: 48px 16px; }
+  .empty h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .empty p { color: var(--muted); font-size: 14px; }
+  .composer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+  }
+  .composer .av { flex-basis: 32px; height: 32px; background: #dcdcdc; }
+  .composer div:last-child {
+    flex: 1; border: 1px solid var(--line); border-radius: 22px;
+    padding: 9px 14px; color: var(--muted); font-size: 14px;
+  }
+
+  /* 휴대폰: 댓글 5개가 스크롤 없이 한 화면에 보이도록 촘촘하게 */
+  @media (max-width: 819px) {
+    .c { padding: 7px 0; gap: 10px; }
+    .av { flex-basis: 32px; height: 32px; }
+    .reply, .composer { display: none; }
+    .sheet-head { padding: 8px 0 9px; font-size: 15px; }
+    .sheet-head::before { margin-bottom: 7px; }
+    /* 댓글 칸은 내용만큼, 영상은 남은 높이를 모두 사용 */
+    .stage { flex: 1 1 auto; height: auto; min-height: 0; }
+    .comments { flex: 0 0 auto; }
+    .list { overflow: visible; }
+    .empty { padding: 40px 16px 70px; }
+  }
+
+  @media (min-width: 820px) {
+    body { display: flex; align-items: center; justify-content: center; }
+    .post {
+      flex-direction: row;
+      max-width: none;
+      height: min(92dvh, 860px);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 1px 12px rgba(0,0,0,.12);
+    }
+    .stage { height: 100%; aspect-ratio: 9 / 16; }
+    .comments { width: 380px; border-top: 0; border-left: 1px solid var(--line); }
+    .sheet-head::before { display: none; }
+  }
+
+  /* 시작·종료 화면 */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10;
+    background: rgba(17,17,17,.92);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px;
+  }
+  .overlay[hidden] { display: none; }
+  .card { max-width: 380px; text-align: center; }
+  .card h1 { font-size: 21px; margin-bottom: 14px; line-height: 1.4; }
+  .card p { font-size: 15px; line-height: 1.65; color: #e4e4e4; margin-bottom: 10px; word-break: keep-all; }
+  .card strong { color: #fff; }
+  .btn {
+    margin-top: 14px; border: 0; border-radius: 10px;
+    background: var(--accent); color: #fff;
+    font-size: 17px; font-weight: 700; padding: 14px 28px;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .code {
+    display: inline-block; margin: 8px 0 14px; padding: 10px 22px;
+    background: #fff; color: #111; border-radius: 10px;
+    font-size: 30px; font-weight: 800; letter-spacing: 6px;
+  }
+  .end { background: #111; }
+</style>
+</head>
+<body>
+
+<main class="post" id="post">
+  <section class="stage">
+    <video id="v" src="video.mp4" playsinline webkit-playsinline preload="auto"
+           disablepictureinpicture controlslist="nodownload nofullscreen noremoteplayback"></video>
+    <div class="progress"><i id="bar"></i></div>
+  </section>
+
+  <section class="comments" aria-label="댓글">
+    <div class="sheet-head">댓글</div>
+    <div class="list" id="list"></div>
+    <div class="composer" aria-hidden="true"><div class="av"></div><div>댓글 달기...</div></div>
+  </section>
+</main>
+
+<div class="overlay" id="start">
+  <div class="card">
+    <h1>인스타그램 게시물 보기</h1>
+    <p>아래 버튼을 누르면 약 30초 길이의 게시물이 재생됩니다.<br><strong>소리를 켜 주세요.</strong></p>
+    <p>평소 인스타그램을 볼 때처럼 편하게 보시되,<br>재생은 <strong>한 번만</strong> 됩니다.</p>
+    <button class="btn" id="go" disabled>불러오는 중...</button>
+  </div>
+</div>
+
+<div class="overlay end" id="done" hidden>
+  <div class="card">
+    <h1>시청이 끝났습니다</h1>
+    <p>설문에 아래 시청 완료 코드를 입력해 주세요.</p>
+    <div class="code" id="code"></div>
+    <p>이 창(탭)을 닫고 설문 화면으로 돌아가 주세요.</p>
+  </div>
+</div>
+
+<div class="overlay end" id="bad" hidden>
+  <div class="card">
+    <h1>링크가 올바르지 않습니다</h1>
+    <p>설문에 있는 링크를 다시 눌러 주세요.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  // 조건별 댓글 (설문 구성안의 문안과 같음). 닉네임·작성 시점은 모든 조건이 같음.
+  var USERS = [
+    ['yoon_ha.e',   '#f6c9cc'],
+    ['minseo_0412', '#dccdf0'],
+    ['jh.park_',    '#cfe8cf'],
+    ['soyeon.k',    '#c9dcf2'],
+    ['daily_hyun',  '#efdfc6']
+  ];
+  var CONDITIONS = {
+    A: { code: '3172', comments: [] },
+    B: { code: '5841', comments: [
+      '여기 예약 가능한가요?',
+      '주차 공간 있나요?',
+      '포장도 되나요?',
+      '매장 좌석은 몇 개 정도인가요?',
+      '보통 웨이팅 있나요?'
+    ]},
+    C: { code: '2694', comments: [
+      '직접 가보니 전반적으로 만족스러웠어요',
+      '직원분들 응대가 친절했어요',
+      '매장 분위기가 아늑해서 좋았어요',
+      '양이 넉넉해서 배불렀어요',
+      '웨이팅이 짧아서 편했어요'
+    ]},
+    D: { code: '7408', comments: [
+      '직접 가보니 전반적으로 아쉬웠어요',
+      '직원분들 응대가 불친절했어요',
+      '매장이 시끄러워서 별로였어요',
+      '양이 적어서 아쉬웠어요',
+      '웨이팅이 길어서 힘들었어요'
+    ]}
+  };
+
+  var params = new URLSearchParams(location.search);
+  var key = (params.get('c') || '').toUpperCase();
+  var cond = CONDITIONS[key];
+  var $ = function (id) { return document.getElementById(id); };
+
+  if (!cond) {
+    $('start').hidden = true;
+    $('post').style.visibility = 'hidden';
+    $('bad').hidden = false;
+    return;
+  }
+
+  var store = 'watched_' + key;
+  function getFlag() { try { return localStorage.getItem(store) === '1'; } catch (e) { return false; } }
+  function setFlag() { try { localStorage.setItem(store, '1'); } catch (e) {} }
+  if (params.get('reset') === '1') { try { localStorage.removeItem(store); } catch (e) {} }
+
+  // 댓글 그리기
+  var list = $('list');
+  if (cond.comments.length === 0) {
+    list.innerHTML = '<div class="empty"><h2>아직 댓글이 없습니다.</h2><p>대화를 시작하세요.</p></div>';
+  } else {
+    var heart = '<svg class="heart" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4h2c.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg>';
+    list.innerHTML = cond.comments.map(function (t, i) {
+      var u = USERS[i];
+      return '<div class="c"><div class="av" style="background:' + u[1] + '"></div>' +
+        '<div class="body"><div class="meta"><b>' + u[0] + '</b><span>3일 전</span></div>' +
+        '<div class="txt">' + t + '</div><div class="reply">답글 달기</div></div>' + heart + '</div>';
+    }).join('');
+  }
+
+  var v = $('v'), go = $('go'), bar = $('bar');
+  var started = false, finished = false;
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    setFlag();
+    try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {}
+    $('post').style.visibility = 'hidden';
+    $('code').textContent = cond.code;
+    $('start').hidden = true;
+    $('done').hidden = false;
+    // 스크립트로 연 창이 아니면 브라우저가 막으므로, 막혀도 종료 화면이 남습니다.
+    try { window.close(); } catch (e) {}
+  }
+
+  // 이미 본 사람은 다시 볼 수 없게
+  if (getFlag()) { finish(); return; }
+
+  function ready() { go.disabled = false; go.textContent = '재생 시작'; }
+  if (v.readyState >= 3) ready();
+  v.addEventListener('canplay', ready);
+  setTimeout(ready, 4000); // 느린 연결에서도 버튼은 열어 둠
+
+  go.addEventListener('click', function () {
+    started = true;
+    v.muted = false;
+    v.currentTime = 0;
+    var p = v.play();
+    if (p && p.catch) p.catch(function () { started = false; go.textContent = '다시 눌러 주세요'; $('start').hidden = false; });
+    $('start').hidden = true;
+  });
+
+  // 멈춤·되감기 막기
+  var maxT = 0;
+  v.addEventListener('timeupdate', function () {
+    if (v.currentTime > maxT) maxT = v.currentTime;
+    if (v.duration) bar.style.width = (v.currentTime / v.duration * 100) + '%';
+  });
+  v.addEventListener('seeking', function () {
+    if (started && Math.abs(v.currentTime - maxT) > 0.5) v.currentTime = maxT;
+  });
+  v.addEventListener('pause', function () {
+    if (started && !finished && !v.ended && document.visibilityState === 'visible') v.play();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (started && !finished && document.visibilityState === 'visible' && v.paused && !v.ended) v.play();
+  });
+  v.addEventListener('ended', finish);
+  document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  document.addEventListener('keydown', function (e) {
+    if (started && [' ', 'k', 'K', 'ArrowLeft', 'ArrowRight', 'j', 'J', 'l', 'L'].indexOf(e.key) >= 0) e.preventDefault();
+  });
+})();
+</script>
+</body>
+</html>
