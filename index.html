@@ -184,7 +184,7 @@
 
 <div class="overlay end" id="done" hidden>
   <div class="card">
-    <h1>시청이 끝났습니다</h1>
+    <h1 id="doneTitle">시청이 끝났습니다</h1>
     <p>이 창(탭)을 닫고 설문 화면으로 돌아가<br>'다음'을 눌러 주세요.</p>
   </div>
 </div>
@@ -265,7 +265,7 @@
   var v = $('v'), go = $('go'), bar = $('bar');
   var started = false, finished = false;
 
-  function finish() {
+  function finish(again) {
     if (finished) return;
     finished = true;
     setFlag();
@@ -273,12 +273,13 @@
     $('post').style.visibility = 'hidden';
     $('start').hidden = true;
     $('done').hidden = false;
+    if (again) { $('doneTitle').textContent = '이미 시청하신 게시물입니다'; return; }
     // 스크립트로 연 창이 아니면 브라우저가 막으므로, 막혀도 종료 화면이 남습니다.
     try { window.close(); } catch (e) {}
   }
 
   // 이미 본 사람은 다시 볼 수 없게
-  if (getFlag()) { finish(); return; }
+  if (getFlag()) { finish(true); return; }
 
   function ready() { go.disabled = false; go.textContent = '재생 시작'; }
   if (v.readyState >= 3) ready();
