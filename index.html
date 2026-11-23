@@ -310,7 +310,7 @@
   document.addEventListener('visibilitychange', function () {
     if (started && !finished && document.visibilityState === 'visible' && v.paused && !v.ended) v.play();
   });
-  v.addEventListener('ended', finish);
+  v.addEventListener('ended', function () { finish(false); });
   document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   document.addEventListener('keydown', function (e) {
     if (started && [' ', 'k', 'K', 'ArrowLeft', 'ArrowRight', 'j', 'J', 'l', 'L'].indexOf(e.key) >= 0) e.preventDefault();
