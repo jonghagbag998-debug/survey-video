@@ -185,9 +185,7 @@
 <div class="overlay end" id="done" hidden>
   <div class="card">
     <h1>시청이 끝났습니다</h1>
-    <p>설문에 아래 시청 완료 코드를 입력해 주세요.</p>
-    <div class="code" id="code"></div>
-    <p>이 창(탭)을 닫고 설문 화면으로 돌아가 주세요.</p>
+    <p>이 창(탭)을 닫고 설문 화면으로 돌아가<br>'다음'을 눌러 주세요.</p>
   </div>
 </div>
 
@@ -273,7 +271,6 @@
     setFlag();
     try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {}
     $('post').style.visibility = 'hidden';
-    $('code').textContent = cond.code;
     $('start').hidden = true;
     $('done').hidden = false;
     // 스크립트로 연 창이 아니면 브라우저가 막으므로, 막혀도 종료 화면이 남습니다.
