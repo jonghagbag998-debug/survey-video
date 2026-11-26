@@ -161,7 +161,7 @@
 
 <main class="post" id="post">
   <section class="stage">
-    <video id="v" src="video.mp4?v=20261125" playsinline webkit-playsinline preload="auto"
+    <video id="v" src="video.mp4?v=20261125" muted playsinline webkit-playsinline preload="auto"
            disablepictureinpicture controlslist="nodownload nofullscreen noremoteplayback"></video>
     <div class="progress"><i id="bar"></i></div>
   </section>
@@ -176,7 +176,7 @@
 <div class="overlay" id="start">
   <div class="card">
     <h1>인스타그램 게시물 보기</h1>
-    <p>아래 버튼을 누르면 약 30초 길이의 게시물이 재생됩니다.<br><strong>소리를 켜 주세요.</strong></p>
+    <p>아래 버튼을 누르면 약 30초 길이의 게시물이 재생됩니다.<br>소리 없이 재생되며, 내용은 자막으로 나옵니다.</p>
     <p>평소 인스타그램을 볼 때처럼 편하게 보시되,<br>재생은 <strong>한 번만</strong> 됩니다.</p>
     <button class="btn" id="go" disabled>불러오는 중...</button>
   </div>
@@ -288,12 +288,15 @@
 
   go.addEventListener('click', function () {
     started = true;
-    v.muted = false;
+    v.muted = true;
     v.currentTime = 0;
     var p = v.play();
     if (p && p.catch) p.catch(function () { started = false; go.textContent = '다시 눌러 주세요'; $('start').hidden = false; });
     $('start').hidden = true;
   });
+
+  // 모든 참여자가 같은 조건으로 보도록 항상 음소거
+  v.addEventListener('volumechange', function () { if (!v.muted) v.muted = true; });
 
   // 멈춤·되감기 막기
   var maxT = 0;
